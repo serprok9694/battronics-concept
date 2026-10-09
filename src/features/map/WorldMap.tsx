@@ -1,4 +1,4 @@
-import { Badge, Group, Loader, Paper, Text } from '@mantine/core';
+import { Badge, Button, Group, Loader, Paper, Stack, Text } from '@mantine/core';
 import type { StyleSpecification } from 'maplibre-gl';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Map, { Layer, Source, type MapLayerMouseEvent, type MapRef } from 'react-map-gl/maplibre';
@@ -8,7 +8,7 @@ import { STATUS_LABEL } from '../../domain/format';
 import { MAP_COLORS, shareColor } from '../../domain/scale';
 import { useProductView } from '../useProductView';
 import './maplibreSetup';
-import { COUNTRY_GEOJSON, type CountryFeatureProps } from './geo';
+import { buildCountryGeoJSON, type CountryFeatureProps } from './geo';
 import { MapLegend } from './MapLegend';
 import { MapTooltip } from './MapTooltip';
 
@@ -45,8 +45,12 @@ interface Hover {
 
 export function WorldMap() {
   const { selection, actions, availability, countries } = useDashboard();
-  const { matrix, product, year, isStale, isLoading } = useProductView();
+  const { matrix, product, selectedProduct, year, isStale, isLoading, error, refetch } = useProductView();
+  // A product is selected but its data is not there (loading or failed): the map must not
+  // fall back to the "no product" mode, which would show misleading colours and clicks.
+  const awaitingData = selectedProduct !== null && !matrix;
   const mapRef = useRef<MapRef>(null);
+  const geojson = useMemo(() => buildCountryGeoJSON(countries.values()), [countries]);
   const [ready, setReady] = useState(false);
   const [hover, setHover] = useState<Hover | null>(null);
 
@@ -58,20 +62,22 @@ export function WorldMap() {
   /** R8/R9: with a product selected only its producers are clickable; otherwise any dataset country. */
   const isClickable = useCallback(
     (p: CountryFeatureProps) => {
-      if (!p.iso3) return false;
+      if (!p.iso3 || awaitingData) return false;
       if (matrix) return availability.has(p.iso3, matrix.productId);
       return availability.hasCountry(p.iso3);
     },
-    [matrix, availability],
+    [matrix, availability, awaitingData],
   );
 
   // Fill colour per feature, pushed to MapLibre as feature-state (no GeoJSON re-upload on each year).
   const fills = useMemo(() => {
     const out: Array<[string, string]> = [];
-    for (const f of COUNTRY_GEOJSON.features) {
+    for (const f of geojson.features) {
       const p = f.properties;
       let color: string = MAP_COLORS.noData;
-      if (p.iso3 && matrix) {
+      if (awaitingData) {
+        color = MAP_COLORS.noData;
+      } else if (p.iso3 && matrix) {
         const row = rowByIso.get(p.iso3);
         if (!row || !availability.has(p.iso3, matrix.productId)) color = MAP_COLORS.notProducer;
         else color = row.value === null ? MAP_COLORS.noData : shareColor(row.share);
@@ -81,7 +87,7 @@ export function WorldMap() {
       out.push([p.fid, color]);
     }
     return out;
-  }, [matrix, rowByIso, availability, selection.country]);
+  }, [geojson, matrix, rowByIso, availability, selection.country, awaitingData]);
 
   useEffect(() => {
     const map = mapRef.current?.getMap();
@@ -124,6 +130,7 @@ export function WorldMap() {
   };
 
   const selectedName = selection.country ? countries.get(selection.country)?.name : null;
+  const titleProduct = product ?? selectedProduct;
 
   return (
     <>
@@ -144,7 +151,7 @@ export function WorldMap() {
         onClick={onClick}
         attributionControl={{ compact: true, customAttribution: 'Boundaries: Natural Earth' }}
       >
-        <Source id={SOURCE_ID} type="geojson" data={COUNTRY_GEOJSON} promoteId="fid">
+        <Source id={SOURCE_ID} type="geojson" data={geojson} promoteId="fid">
           <Layer
             id={FILL_LAYER}
             type="fill"
@@ -181,7 +188,7 @@ export function WorldMap() {
       <Paper withBorder shadow="xs" px="sm" py={6} pos="absolute" top={10} left={10} style={{ pointerEvents: 'none' }}>
         <Group gap="xs">
           <Text size="sm" fw={600}>
-            {product ? `${product.name} · share of world production` : selectedName ? selectedName : 'Countries in dataset'}
+            {titleProduct ? `${titleProduct.name} · share of world production` : selectedName ? selectedName : 'Countries in dataset'}
           </Text>
           {year && (
             <>
@@ -197,7 +204,23 @@ export function WorldMap() {
         </Group>
       </Paper>
 
-      <MapLegend mode={product ? 'share' : 'neutral'} />
+      <MapLegend mode={selectedProduct ? 'share' : 'neutral'} />
+
+      {error && (
+        <Paper withBorder shadow="md" p="md" pos="absolute" top="40%" left="50%" style={{ transform: 'translate(-50%, -50%)' }}>
+          <Stack gap={6} align="center">
+            <Text size="sm" fw={600}>
+              Could not load {selectedProduct?.name ?? 'data'}
+            </Text>
+            <Text size="xs" c="dimmed">
+              {error.message}
+            </Text>
+            <Button size="compact-xs" variant="light" onClick={() => void refetch()}>
+              Retry
+            </Button>
+          </Stack>
+        </Paper>
+      )}
 
       {hover && (
         <MapTooltip

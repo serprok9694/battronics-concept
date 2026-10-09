@@ -2,7 +2,7 @@ import type { Feature, FeatureCollection, Geometry } from 'geojson';
 import { feature } from 'topojson-client';
 import type { GeometryCollection, Topology } from 'topojson-specification';
 import world from 'world-atlas/countries-110m.json';
-import { COUNTRIES } from '../../mocks/reference';
+import type { Country } from '../../api/types';
 
 export interface CountryFeatureProps {
   fid: string; // stable feature id (promoted for feature-state)
@@ -10,10 +10,6 @@ export interface CountryFeatureProps {
   name: string;
   inDataset: boolean;
 }
-
-// world-atlas features carry numeric ISO 3166 ids. Matching on the numeric code
-// avoids the Natural Earth "ISO_A3 = -99" pitfall (France, Norway) — edge case E13.
-const isoByNumeric = new Map(COUNTRIES.map((c) => [c.isoNumeric, c.iso3]));
 
 /**
  * Russia and Fiji cross the antimeridian: their rings jump from +180 to −180,
@@ -34,21 +30,24 @@ function fixAntimeridian(geometry: Geometry): Geometry {
 const topology = world as unknown as Topology<{ countries: GeometryCollection<{ name: string }> }>;
 const collection = feature(topology, topology.objects.countries) as FeatureCollection<Geometry, { name: string }>;
 
-export const COUNTRY_GEOJSON: FeatureCollection<Geometry, CountryFeatureProps> = {
-  type: 'FeatureCollection',
-  features: collection.features
-    .filter((f) => f.properties.name !== 'Antarctica')
-    .map((f, i): Feature<Geometry, CountryFeatureProps> => {
-      const iso3 = f.id !== undefined ? (isoByNumeric.get(String(f.id)) ?? null) : null;
-      return {
-        type: 'Feature',
-        geometry: fixAntimeridian(f.geometry),
-        properties: { fid: iso3 ?? `x-${f.id ?? i}`, iso3, name: f.properties.name, inDataset: iso3 !== null },
-      };
-    }),
-};
-
-/** Dataset countries that have no polygon at 110m resolution — listed in tables only (E14). */
-export const COUNTRIES_WITHOUT_GEOMETRY = COUNTRIES.filter(
-  (c) => !COUNTRY_GEOJSON.features.some((f) => f.properties.iso3 === c.iso3),
-).map((c) => c.iso3);
+/**
+ * Country polygons joined with the dataset's country dictionary (from the API).
+ * world-atlas features carry numeric ISO 3166 ids; matching on them avoids the
+ * Natural Earth "ISO_A3 = -99" pitfall (France, Norway) — edge case E13.
+ */
+export function buildCountryGeoJSON(countries: Iterable<Country>): FeatureCollection<Geometry, CountryFeatureProps> {
+  const isoByNumeric = new Map([...countries].map((c) => [c.isoNumeric, c.iso3]));
+  return {
+    type: 'FeatureCollection',
+    features: collection.features
+      .filter((f) => f.properties.name !== 'Antarctica')
+      .map((f, i): Feature<Geometry, CountryFeatureProps> => {
+        const iso3 = f.id !== undefined ? (isoByNumeric.get(String(f.id)) ?? null) : null;
+        return {
+          type: 'Feature',
+          geometry: fixAntimeridian(f.geometry),
+          properties: { fid: iso3 ?? `x-${f.id ?? i}`, iso3, name: f.properties.name, inDataset: iso3 !== null },
+        };
+      }),
+  };
+}

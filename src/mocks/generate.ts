@@ -1,4 +1,5 @@
 import { ROW, type DataStatus, type ProductId, type ProductMatrix } from '../api/types';
+import { statusOfYear } from '../domain/status';
 import { SCENARIOS, type Keyframe } from './keyframes';
 import { FIRST_YEAR, LAST_YEAR, LATEST_ACTUAL_YEAR } from './reference';
 
@@ -11,10 +12,7 @@ export const YEARS: number[] = Array.from(
   (_, i) => FIRST_YEAR + i,
 );
 
-export function statusOf(year: number): DataStatus {
-  if (year <= LATEST_ACTUAL_YEAR) return 'actual';
-  return year === LATEST_ACTUAL_YEAR + 1 ? 'estimate' : 'forecast';
-}
+export const statusOf = (year: number): DataStatus => statusOfYear(year, { latestActualYear: LATEST_ACTUAL_YEAR });
 
 /** Linear interpolation; 0 before the first keyframe, last value held after. */
 function interpolate(frames: readonly Keyframe[], year: number): number {
