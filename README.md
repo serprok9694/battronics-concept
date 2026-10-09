@@ -2,6 +2,8 @@
 
 A prototype that shows the production of battery supply-chain products by country on a world map for 2010–2026. You can pick a **country or a product first**, and the other filter then offers only valid combinations.
 
+**Live demo:** https://serprok9694.github.io/battronics-concept/
+
 > **All data is mock data.** Numbers are plausible orders of magnitude, not real statistics.
 
 ## What it answers, and for whom
@@ -26,17 +28,17 @@ Other scripts: `npm run build`, `npm run lint` (oxlint), `npm run preview`.
 
 ## Demo scenarios
 
-The state lives in the URL, so every view is a link:
+The state lives in the URL, so every view is a link (append to the demo URL):
 
 | Story | Link |
 |---|---|
-| Who controls cobalt mining? (DR Congo ≈ 70%) | `/?product=cobalt-mined` |
-| Mined vs refined: China refines ≈ 80% | `/?product=cobalt-refined` |
-| Indonesia's nickel: ore export ban (2014), then dominance. Press ▶ | `/?product=nickel&year=2012` |
-| Indonesia as a country profile | `/?country=IDN` |
-| Graphite: persistently highly concentrated | `/?product=graphite` |
-| New entrant outside the selected period (empty state E1) | `/?product=lithium&country=ZWE&first=product&to=2015&year=2014` |
-| Simulated API failure (error state) | `/?product=graphite&fail=1` |
+| Who controls cobalt mining? (DR Congo ≈ 70%) | `?product=cobalt-mined` |
+| Mined vs refined: China refines ≈ 80% | `?product=cobalt-refined` |
+| Indonesia's nickel: ore export ban (2014), then dominance. Press ▶ | `?product=nickel&year=2012` |
+| Indonesia as a country profile | `?country=IDN` |
+| Graphite: persistently highly concentrated | `?product=graphite` |
+| New entrant outside the selected period (empty state E1) | `?product=lithium&country=ZWE&first=product&to=2015&year=2014` |
+| Simulated API failure (error state) | `?product=graphite&fail=1` |
 
 ## Linked filters: rules
 
@@ -90,7 +92,7 @@ src/
 
 ## Deliberately not done (concept scope)
 
-Tests, Docker, CI, OpenAPI client generation and authentication were left out on purpose: the brief asks for a prototype, so the time went into the business logic. Also out of scope: multi-country comparison, trade-flow maps, risk overlays, alerts, saved views, mobile layout, i18n.
+Tests, Docker, OpenAPI client generation and authentication were left out on purpose: the brief asks for a prototype, so the time went into the business logic. A minimal GitHub Actions pipeline (lint → build → deploy to GitHub Pages) is included. Also out of scope: multi-country comparison, trade-flow maps, risk overlays, alerts, saved views, mobile layout, i18n.
 
 ## Path to production
 

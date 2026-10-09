@@ -3,6 +3,8 @@ import { defineConfig } from 'vite'
 
 // https://vite.dev/config/
 export default defineConfig({
+  // GitHub Pages serves the app from /<repo>/; set by the deploy workflow.
+  base: process.env.BASE_PATH ?? '/',
   plugins: [react()],
   optimizeDeps: {
     // MapLibre 6 loads its worker relative to its own module URL; pre-bundling
