@@ -116,10 +116,13 @@ export function summarizeYear(m: ProductMatrix, year: number): YearSummary {
 export interface PeriodStats {
   iso3: Iso3;
   cagr: Growth;
-  cumulative: number;
   shareChange: number | null; // percentage points / 100
 }
 
+/**
+ * Growth between `from` and `to`. Callers pass the FOCUS year as `to`, so every
+ * delta shown next to a focus-year value refers to the same end year.
+ */
 export function summarizePeriod(m: ProductMatrix, from: number, to: number) {
   const a = yearIndex(m, from);
   const b = yearIndex(m, to);
@@ -132,7 +135,6 @@ export function summarizePeriod(m: ProductMatrix, from: number, to: number) {
         {
           iso3: r.iso3,
           cagr: cagr(r.values, m.years, from, to),
-          cumulative: r.values.slice(a, b + 1).reduce<number>((sum, v) => sum + (v ?? 0), 0),
           shareChange: sa === null || sb === null ? null : sb - sa,
         },
       ];
@@ -141,10 +143,12 @@ export function summarizePeriod(m: ProductMatrix, from: number, to: number) {
   const startHhi = summarizeYear(m, from).hhi.value;
   const endHhi = summarizeYear(m, to).hhi.value;
   return {
+    from,
+    to,
     countries,
     worldCagr: cagr(m.world, m.years, from, to),
     hhiChange: endHhi - startHhi,
-    includesEstimates: m.status.slice(a, b + 1).some((s) => s !== 'actual'),
+    includesEstimates: m.status[b] !== 'actual',
   };
 }
 export type PeriodSummary = ReturnType<typeof summarizePeriod>;

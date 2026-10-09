@@ -21,7 +21,7 @@ interface Props {
 export function RankingTable({ product, year, period }: Props) {
   const { selection, countries, actions } = useDashboard();
   const [showAll, setShowAll] = useState(false);
-  const [from, to] = selection.range;
+  const { from, to } = period; // growth ends at the focus year, like the values
   const producers = year.ranking.filter((r) => r.rank !== null || r.value === null);
   const rows = showAll ? producers : producers.slice(0, TOP_N);
   const name = (iso3: string) => countries.get(iso3)?.name ?? iso3;
@@ -56,7 +56,7 @@ export function RankingTable({ product, year, period }: Props) {
         <Text size="sm" fw={600}>
           Producer ranking · {year.year}{' '}
           <Text span size="xs" c="dimmed">
-            ({STATUS_LABEL[year.status]}; growth over {from}–{to})
+            ({STATUS_LABEL[year.status]}; Δ share and CAGR {from}→{to})
           </Text>
         </Text>
         <Button size="compact-xs" variant="default" onClick={exportCsv}>
@@ -119,7 +119,7 @@ export function RankingTable({ product, year, period }: Props) {
       )}
       <Text size="10px" c="dimmed" mt={4}>
         Rest of World = residual to the world total; it is not ranked and is excluded from HHI (so HHI is a lower bound).
-        {period.includesEstimates && ' Growth figures include estimate/forecast years.'}
+        {period.includesEstimates && ' The focus year is an estimate/forecast.'}
       </Text>
     </div>
   );

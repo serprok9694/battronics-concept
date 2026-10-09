@@ -12,13 +12,16 @@ export function useProductView() {
   const { selection, products } = useDashboard();
   const query = useProductMatrix(selection.product);
   const matrix = selection.product ? query.data : undefined;
-  const [from, to] = selection.range;
+  const from = selection.range[0];
+  const focus = selection.focusYear;
 
   const year = useMemo(
     () => (matrix ? summarizeYear(matrix, selection.focusYear) : null),
     [matrix, selection.focusYear],
   );
-  const period = useMemo(() => (matrix ? summarizePeriod(matrix, from, to) : null), [matrix, from, to]);
+  // Growth is measured from the start of the period to the FOCUS year, so deltas
+  // always share the end year of the values they sit next to.
+  const period = useMemo(() => (matrix ? summarizePeriod(matrix, from, focus) : null), [matrix, from, focus]);
 
   return {
     matrix,
@@ -26,8 +29,10 @@ export function useProductView() {
     year,
     period,
     isStale: query.isPlaceholderData,
-    isLoading: selection.product !== null && !matrix,
-    error: query.error,
+    /** The product the user selected (available before its data arrives, unlike `product`). */
+    selectedProduct: selection.product ? products.get(selection.product) ?? null : null,
+    isLoading: selection.product !== null && !matrix && !query.error,
+    error: selection.product ? query.error : null,
     refetch: query.refetch,
   };
 }

@@ -76,6 +76,7 @@ function ProductDetails() {
   if (isLoading || !matrix || !product || !year || !period) return <LoadingState />;
 
   const [from, to] = selection.range;
+  const growth = `${period.from}→${period.to}`; // deltas end at the focus year
   const iso3 = selection.country;
   const estimateNote = period.includesEstimates ? 'incl. estimates' : undefined;
   const countryRow = iso3 ? matrix.rows.find((r) => r.iso3 === iso3) : undefined;
@@ -95,16 +96,16 @@ function ProductDetails() {
         <PairSection iso3={iso3} />
       ) : (
         <>
-          <Insight text={productInsight(product, year, period, selection.range, name)} />
+          <Insight text={productInsight(product, year, period, name)} />
           <KpiGrid
             items={[
               { label: `World production ${year.year}`, value: formatVolume(year.world, product.unit) },
               { label: `Change vs ${year.year - 1}`, value: formatGrowth(yoy(matrix.world, matrix.years, year.year)) },
-              { label: `World CAGR ${from}–${to}`, value: formatGrowth(period.worldCagr), hint: estimateNote },
+              { label: `World CAGR ${growth}`, value: formatGrowth(period.worldCagr), hint: estimateNote },
               {
                 label: 'Concentration (HHI)',
                 value: formatHhi(year.hhi.value),
-                hint: `${HHI_LABEL[year.hhi.category]} · ${period.hhiChange >= 0 ? '+' : '−'}${formatHhi(Math.abs(period.hhiChange))} since ${from}`,
+                hint: `${HHI_LABEL[year.hhi.category]} · ${period.hhiChange >= 0 ? '+' : '−'}${formatHhi(Math.abs(period.hhiChange))} since ${period.from}`,
               },
               {
                 label: 'Top-1 producer',
@@ -120,6 +121,7 @@ function ProductDetails() {
               product={product}
               range={selection.range}
               latestActualYear={meta.latestActualYear}
+              focusYear={selection.focusYear}
               name={name}
             />
           </ChartBlock>
@@ -161,9 +163,10 @@ function PairSection({ iso3 }: { iso3: Iso3 }) {
   }
 
   const stats = period.countries.get(iso3);
+  const growth = `${period.from}→${period.to}`;
   return (
     <Stack gap="md">
-      <Insight text={pairInsight(product, countryName, year, period, iso3, selection.range)} />
+      <Insight text={pairInsight(product, countryName, year, period, iso3)} />
       <KpiGrid
         items={[
           { label: `Production ${year.year}`, value: formatVolume(ranked?.value, product.unit) },
@@ -171,11 +174,16 @@ function PairSection({ iso3 }: { iso3: Iso3 }) {
           { label: 'World rank', value: ranked?.rank ? `#${ranked.rank}` : 'n/a' },
           { label: `Change vs ${year.year - 1}`, value: formatGrowth(yoy(row.values, matrix.years, year.year)) },
           {
-            label: `CAGR ${from}–${to}`,
-            value: formatGrowth(cagr(row.values, matrix.years, from, to)),
-            hint: stats?.cagr.kind === 'value' && stats.cagr.sinceYear !== from ? `from first output in ${stats.cagr.sinceYear}` : period.includesEstimates ? 'incl. estimates' : undefined,
+            label: `CAGR ${growth}`,
+            value: stats ? formatGrowth(stats.cagr) : 'n/a',
+            hint:
+              stats?.cagr.kind === 'value' && stats.cagr.sinceYear !== period.from
+                ? `from first output in ${stats.cagr.sinceYear}`
+                : period.includesEstimates
+                  ? 'incl. estimates'
+                  : undefined,
           },
-          { label: `Share change ${from}–${to}`, value: formatPp(stats?.shareChange) },
+          { label: `Share change ${growth}`, value: formatPp(stats?.shareChange) },
         ]}
       />
       <ChartBlock title={`Production, ${product.unit}`}>
@@ -212,13 +220,13 @@ function CountryDetails({ iso3 }: { iso3: Iso3 }) {
 
   const p = profile.data;
   const year = selection.focusYear;
-  const [from, to] = selection.range;
+  const from = selection.range[0];
   const i = p.years.indexOf(year);
   const items = p.products
     .map((x) => {
       const prod = products.get(x.productId)!;
       const s = share(x.values[i], x.world[i]);
-      return { x, prod, s, cagr: cagr(x.values, p.years, from, to) };
+      return { x, prod, s, cagr: cagr(x.values, p.years, from, year) };
     })
     .sort((a, b) => (b.s ?? 0) - (a.s ?? 0));
   const top = items[0];
@@ -256,7 +264,7 @@ function CountryDetails({ iso3 }: { iso3: Iso3 }) {
               <Table.Th>Stage</Table.Th>
               <Table.Th ta="right">Production</Table.Th>
               <Table.Th ta="right">Share</Table.Th>
-              <Table.Th ta="right">CAGR {from}–{to}</Table.Th>
+              <Table.Th ta="right">CAGR {from}→{year}</Table.Th>
             </Table.Tr>
           </Table.Thead>
           <Table.Tbody>
