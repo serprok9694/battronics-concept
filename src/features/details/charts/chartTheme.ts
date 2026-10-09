@@ -1,4 +1,4 @@
-import type { MarkAreaComponentOption } from 'echarts/components';
+import type { MarkAreaComponentOption, MarkLineComponentOption } from 'echarts/components';
 
 export const CHART_INK = {
   primary: '#0b0b0b',
@@ -23,6 +23,18 @@ export function projectionArea(years: number[], latestActualYear: number): MarkA
     itemStyle: { color: 'rgba(235,104,52,0.07)' },
     label: { show: true, position: 'insideTop', color: CHART_INK.muted, fontSize: 10, formatter: 'est. / forecast' },
     data: [[{ xAxis: String(start) }, { xAxis: String(last) }]],
+  };
+}
+
+/** Vertical rule at the focus year, so the period chart shows which year the map and KPIs refer to. */
+export function focusMarker(focusYear: number, years: number[]): MarkLineComponentOption | undefined {
+  if (!years.includes(focusYear)) return undefined;
+  return {
+    silent: true,
+    symbol: 'none',
+    lineStyle: { color: CHART_INK.primary, width: 1, type: 'solid' },
+    label: { formatter: String(focusYear), color: CHART_INK.secondary, fontSize: 10, position: 'insideEndTop' },
+    data: [{ xAxis: String(focusYear) }],
   };
 }
 

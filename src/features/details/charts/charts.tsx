@@ -1,7 +1,7 @@
 import type { CountryProfile, Product, ProductId, ProductMatrix } from '../../../api/types';
 import { formatShare, formatVolume } from '../../../domain/format';
 import { share } from '../../../domain/metrics';
-import { CHART_INK, OTHER_COLOR, SERIES_COLORS, baseAxes, projectionArea, valueAxis } from './chartTheme';
+import { CHART_INK, OTHER_COLOR, SERIES_COLORS, baseAxes, focusMarker, projectionArea, valueAxis } from './chartTheme';
 import { EChart, type ChartOption } from './EChart';
 
 const compact = new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 });
@@ -24,9 +24,10 @@ export function SupplyStackChart(props: {
   product: Product;
   range: [number, number];
   latestActualYear: number;
+  focusYear: number;
   name: (iso3: string) => string;
 }) {
-  const { matrix, product, range, latestActualYear, name } = props;
+  const { matrix, product, range, latestActualYear, focusYear, name } = props;
   const { a, b, years } = sliceYears(matrix.years, range);
   // Top 5 by volume at the end of the period: stable while the focus year moves,
   // and colour follows the country, not its rank in a given year.
@@ -37,6 +38,17 @@ export function SupplyStackChart(props: {
     const rest = matrix.rest.values[i] ?? 0;
     return matrix.rows.filter((r) => !topIds.has(r.iso3)).reduce((s, r) => s + (r.values[i] ?? 0), rest);
   });
+  // A country that did not report (null) is neither 0 nor part of Rest of World:
+  // show the unknown volume as its own layer so the stack still adds up to the world total.
+  const notReported = years.map((_, k) => {
+    const i = a + k;
+    const known = matrix.rows.reduce((s, r) => s + (r.values[i] ?? 0), matrix.rest.values[i] ?? 0);
+    const world = matrix.world[i] ?? 0;
+    const gap = world - known;
+    return gap > world * 0.005 ? Math.round(gap * 10) / 10 : 0; // ignore rounding residue
+  });
+  const hasGaps = notReported.some((v) => v > 0);
+  const stackData = (values: Array<number | null>) => values.slice(a, b + 1).map((v) => v ?? 0);
 
   const option: ChartOption = {
     ...baseAxes(years),
@@ -52,7 +64,7 @@ export function SupplyStackChart(props: {
         lineStyle: { width: 1, color: '#fff' },
         showSymbol: false,
         color: SERIES_COLORS[idx],
-        data: r.values.slice(a, b + 1),
+        data: stackData(r.values),
       })),
       {
         name: 'All others (incl. Rest of World)',
@@ -64,7 +76,22 @@ export function SupplyStackChart(props: {
         color: OTHER_COLOR,
         data: others,
         markArea: projectionArea(years, latestActualYear),
+        markLine: focusMarker(focusYear, years),
       },
+      ...(hasGaps
+        ? [
+            {
+              name: 'Not reported',
+              type: 'line' as const,
+              stack: 'supply',
+              areaStyle: { opacity: 1, color: '#f0efec' },
+              lineStyle: { width: 1, color: '#c3c2b7', type: 'dashed' as const },
+              showSymbol: false,
+              color: '#c3c2b7',
+              data: notReported,
+            },
+          ]
+        : []),
     ],
   };
   return <EChart option={option} height={240} />;
