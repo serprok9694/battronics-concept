@@ -35,33 +35,38 @@ export function PeriodControls() {
   ];
 
   return (
-    <Group gap="lg" align="flex-end" wrap="wrap">
+    // Both columns share one grid: header row (22px) · control row (28px, the Play button
+    // height) · tick labels, so the two sliders sit on the same line.
+    <Group gap="lg" align="flex-start" wrap="wrap">
       <Box w={240}>
-        <Text size="sm" fw={500}>
-          Period{' '}
-          <Text span c="dimmed" size="sm" className="tabular">
-            {draftRange[0]}–{draftRange[1]}
+        <Group h={22} gap={6}>
+          <Text size="sm" fw={500}>
+            Period{' '}
+            <Text span c="dimmed" size="sm" className="tabular">
+              {draftRange[0]}–{draftRange[1]}
+            </Text>
           </Text>
-        </Text>
-        <RangeSlider
-          mt={6}
-          mb="lg"
-          min={bounds.firstYear}
-          max={bounds.lastYear}
-          step={1}
-          minRange={0}
-          value={draftRange}
-          onChange={setDragRange}
-          onChangeEnd={(r) => {
-            setDragRange(null);
-            actions.setRange(r);
-          }}
-          marks={marks}
-          aria-label="Period"
-        />
+        </Group>
+        <Box h={28} mt={6} mb="lg" style={{ display: 'flex', alignItems: 'center' }}>
+          <RangeSlider
+            flex={1}
+            min={bounds.firstYear}
+            max={bounds.lastYear}
+            step={1}
+            minRange={0}
+            value={draftRange}
+            onChange={setDragRange}
+            onChangeEnd={(r) => {
+              setDragRange(null);
+              actions.setRange(r);
+            }}
+            marks={marks}
+            aria-label="Period"
+          />
+        </Box>
       </Box>
       <Box w={240}>
-        <Group gap={6} justify="space-between">
+        <Group h={22} gap={6} justify="space-between">
           <Text size="sm" fw={500}>
             Focus year{' '}
             <Text span c="dimmed" size="sm" className="tabular">
@@ -72,7 +77,7 @@ export function PeriodControls() {
             {STATUS_LABEL[status]}
           </Badge>
         </Group>
-        <Group gap="xs" wrap="nowrap" mt={6} mb="lg">
+        <Group h={28} gap="xs" wrap="nowrap" mt={6} mb="lg">
           <Tooltip label={playing ? 'Pause' : `Play ${from}–${to}`}>
             <ActionIcon variant="light" onClick={togglePlay} aria-label={playing ? 'Pause' : 'Play'} disabled={from === to}>
               {playing ? '❚❚' : '▶'}
@@ -86,6 +91,10 @@ export function PeriodControls() {
             value={selection.focusYear}
             onChange={actions.setFocusYear}
             disabled={from === to}
+            marks={[
+              { value: from, label: String(from) },
+              { value: to, label: String(to) },
+            ]}
             label={(v) => `${v} · ${STATUS_LABEL[statusOfYear(v, meta)]}`}
             aria-label="Focus year"
           />
