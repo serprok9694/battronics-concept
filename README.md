@@ -11,7 +11,7 @@ A prototype that shows the production of battery supply-chain products by countr
 | Persona | Key questions | Where the prototype answers them |
 |---|---|---|
 | **Analyst** | Who produces X, how much (with units)? How did shares change? Who is a new entrant? Can I export the numbers? | Choropleth + tooltip, ranking table (Δ share, CAGR), stacked supply chart, CSV export |
-| **Procurement / strategy** | How concentrated is supply? How dependent are we on one country? Are alternatives growing? What does country Y matter for? | HHI + top-1 / CR3 KPIs, "fastest-growing alternative" insight, country portfolio view |
+| **Procurement / strategy** | How concentrated is supply? How dependent are we on one country? Are alternatives growing? What does country Y matter for? | HHI + top-1 / CR3 KPIs, "gaining share fastest" insight, country portfolio view |
 | **Executive** | One sentence: who dominates and is dependency rising? Is it fact or forecast? | Insight line, actual/estimate/forecast badges, shareable link |
 
 The main metric in this domain is **concentration, not volume**: critical raw materials matter because supply sits in very few countries.
@@ -32,7 +32,7 @@ npm install
 npm run dev    # http://localhost:5173
 ```
 
-Other scripts: `npm run build`, `npm run lint` (oxlint), `npm run preview`.
+Other scripts: `npm test` (Vitest), `npm run typecheck`, `npm run lint` (oxlint), `npm run build`, `npm run preview`.
 
 ## Demo scenarios
 
@@ -69,10 +69,12 @@ The rules are a pure reducer in [`src/domain/selection.ts`](src/domain/selection
 | World share | `V(c,y) / World(y)` | Basis of the map colours; the scale has fixed thresholds, identical for every product and year |
 | Rank | Position by volume in a year | Rest of World is not ranked |
 | YoY | `V(y)/V(y−1) − 1` | Previous year 0 → "New since …", never a fake % |
-| CAGR | `(V(to)/V(from))^(1/(to−from)) − 1` | If production starts inside the period, computed from the first year with output and labelled "since YYYY" |
-| Δ share | `share(to) − share(from)`, in percentage points | Who gains or loses share |
+| CAGR | `(V(focus)/V(from))^(1/(focus−from)) − 1` | If production starts inside the period, computed from the first year with output and labelled "since YYYY" |
+| Δ share | `share(focus) − share(from)`, in percentage points | Who gains or loses share; drives the "gaining share fastest" insight |
 | HHI | `Σ (share %)²`, 0–10 000 | US DOJ/FTC 2023 thresholds: < 1 000 unconcentrated, 1 000–1 800 moderate, > 1 800 high. Rest of World is excluded, so HHI is a lower bound |
 | CR3 | Sum of top-3 shares | Easier to read than HHI for executives |
+
+**One time basis.** Values, shares and HHI refer to the **focus year**. All changes (CAGR, Δ share, HHI change) run from the **start of the period to the focus year** and are labelled `2010→2024`, so a 2024 value is never shown next to a delta that ends in a 2026 forecast. The period's end only limits the charts and the Play range.
 
 **Data status:** 2010–2024 actual, 2025 estimate, 2026 forecast. Projections are marked in badges, tooltips, a shaded chart band and the "incl. estimates" hint on growth figures.
 
@@ -102,14 +104,14 @@ src/
 
 ## Deliberately not done (concept scope)
 
-Tests, Docker, OpenAPI client generation and authentication were left out on purpose: the brief asks for a prototype, so the time went into the business logic. A minimal GitHub Actions pipeline (lint → build → deploy to GitHub Pages) is included. Also out of scope: multi-country comparison, trade-flow maps, risk overlays, alerts, saved views, mobile layout, i18n.
+Docker, OpenAPI client generation, authentication and UI/e2e tests were left out on purpose: the brief asks for a prototype, so the time went into the business logic. That logic is unit-tested: `src/domain` (filter rules, URL parsing, metrics, the value-chain graph) and the mock-data invariants, with Vitest. GitHub Actions runs lint, typecheck, tests and build on every push and pull request, and deploys `main` to GitHub Pages. Also out of scope: multi-country comparison, trade-flow maps, risk overlays, alerts, saved views, mobile layout, i18n.
 
 ## Path to production
 
 - **API:** generate a typed client from the backend's OpenAPI spec (`openapi-typescript` + `openapi-fetch`, or `orval`) behind the same function signatures. Move aggregates (shares, HHI, ranks) to the server so the dashboard and exports share one source of truth. Use pagination and filtering for ranking and list endpoints, and HTTP caching (ETag) for matrices.
 - **Auth:** OIDC Authorization Code + PKCE (`oidc-client-ts` / `react-oidc-context`), access token in memory, silent refresh, a single 401/403 handler in the client. Subscription entitlements filter the reference data on the backend.
-- **Tests:** unit tests for `src/domain` first (pure functions: selection rules, metrics, edge cases). Then component tests (Testing Library + MSW in place of the fake API), and Playwright e2e for the demo scenarios.
-- **Delivery:** multi-stage Dockerfile (node build → nginx static) with runtime config from env. CI runs lint, strict typecheck, tests, build, preview deploys per PR, and a bundle-size budget. The bundle is currently one ~690 kB gzip chunk, so split MapLibre and ECharts into lazy chunks.
+- **Tests:** domain unit tests exist. Next: component tests (Testing Library + MSW in place of the fake API), and Playwright e2e for the demo scenarios.
+- **Delivery:** multi-stage Dockerfile (node build → nginx static) with runtime config from env. CI already runs lint, typecheck, tests and build. Add preview deploys per PR and a bundle-size budget. The bundle is currently one ~690 kB gzip chunk, so split MapLibre and ECharts into lazy chunks.
 - **Map at scale:** vector tiles (PMTiles) instead of GeoJSON, a policy on disputed borders, and an equal-area or globe projection to avoid Mercator's area distortion.
 - **Data trust:** dataset version and release date, per-point source lineage, revision history (estimate → actual), methodology notes.
 
