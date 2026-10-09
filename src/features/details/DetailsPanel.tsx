@@ -3,11 +3,13 @@ import type { ReactNode } from 'react';
 import type { Iso3, ProductId } from '../../api/types';
 import { useDashboard } from '../../app/useDashboard';
 import { formatCagr, formatGrowth, formatHhi, formatPp, formatShare, formatVolume, STATUS_LABEL } from '../../domain/format';
+import { BATTERY_CHAIN, chainFor } from '../../domain/chain';
 import { pairInsight, productInsight } from '../../domain/insight';
 import { cagr, HHI_LABEL, share, yoy } from '../../domain/metrics';
 import { useCountryProfile } from '../../queries/hooks';
 import { useProductView } from '../useProductView';
 import { PortfolioShareChart, ShareChart, SupplyStackChart, VolumeChart } from './charts/charts';
+import { ChainView } from './ChainView';
 import { KpiGrid } from './Kpi';
 import { RankingTable } from './RankingTable';
 
@@ -86,6 +88,8 @@ function ProductDetails() {
         year={year.year}
         status={year.status}
       />
+
+      <ProductChain productId={product.id} country={iso3 && countryRow ? iso3 : null} />
 
       {iso3 && countryRow ? (
         <PairSection iso3={iso3} />
@@ -237,6 +241,7 @@ function CountryDetails({ iso3 }: { iso3: Iso3 }) {
           { label: 'Products with ≥25% share', value: String(critical.length), hint: 'potential chokepoints' },
         ]}
       />
+      <ChainView products={BATTERY_CHAIN} country={iso3} mode="country" />
       <ChartBlock title={`Share of world production by product, ${year}`}>
         <PortfolioShareChart profile={p} products={products} focusYear={year} />
       </ChartBlock>
@@ -272,6 +277,17 @@ function CountryDetails({ iso3 }: { iso3: Iso3 }) {
       </div>
     </Stack>
   );
+}
+
+function ProductChain({ productId, country }: { productId: ProductId; country: Iso3 | null }) {
+  const chain = chainFor(productId);
+  if (!chain)
+    return (
+      <Text size="xs" c="dimmed">
+        Not part of the Li-ion battery value chain (rare earths go mainly into EV motor magnets).
+      </Text>
+    );
+  return <ChainView products={chain} current={productId} country={country} mode="product" />;
 }
 
 // ---- Small building blocks ----------------------------------------------

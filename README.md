@@ -16,6 +16,14 @@ A prototype that shows the production of battery supply-chain products by countr
 
 The main metric in this domain is **concentration, not volume**: critical raw materials matter because supply sits in very few countries.
 
+## Supply chain view
+
+Every product belongs to the Li-ion battery value chain **mining → refining → materials → cells**. It is modelled as a small graph in [`src/domain/chain.ts`](src/domain/chain.ts): lithium, nickel, manganese and refined cobalt feed cathode material, graphite feeds anode material, cathode and anode feed cells.
+
+- **Product view:** for each step of the product's chain, shows who leads it and how concentrated it is, plus the most concentrated step overall. Example for cobalt: *DR Congo 71% → China 80% → China 84% → China 75%*, so the dependency moves from mining to processing. With a country selected, each step also shows that country's share and rank.
+- **Country view:** where the country sits in the chain. *"DR Congo is present only in mining"* vs. *"China is present at every step"*.
+- Rare earths are tracked but are not part of this chain (they go into EV motor magnets).
+
 ## Run
 
 ```bash
@@ -36,6 +44,8 @@ The state lives in the URL, so every view is a link (append to the demo URL):
 | Mined vs refined: China refines ≈ 80% | `?product=cobalt-refined` |
 | Indonesia's nickel: ore export ban (2014), then dominance. Press ▶ | `?product=nickel&year=2012` |
 | Indonesia as a country profile | `?country=IDN` |
+| Where DR Congo sits in the chain (mining only) | `?country=COD` |
+| Whole cell chain: which step is the bottleneck? | `?product=cells` |
 | Graphite: persistently highly concentrated | `?product=graphite` |
 | New entrant outside the selected period (empty state E1) | `?product=lithium&country=ZWE&first=product&to=2015&year=2014` |
 | Simulated API failure (error state) | `?product=graphite&fail=1` |

@@ -1,4 +1,4 @@
-import { keepPreviousData, queryOptions, useQuery } from '@tanstack/react-query';
+import { keepPreviousData, queryOptions, useQueries, useQuery } from '@tanstack/react-query';
 import * as api from '../api/endpoints';
 import type { Iso3, ProductId } from '../api/types';
 
@@ -47,6 +47,24 @@ export const useCountryOptions = (product: ProductId | null) =>
     queryFn: ({ signal }) => api.getCountries({ product }, signal),
     placeholderData: keepPreviousData,
     staleTime: 5 * 60_000,
+  });
+
+const productMatrixQuery = (product: ProductId) =>
+  queryOptions({
+    queryKey: queryKeys.productMatrix(product),
+    queryFn: ({ signal }) => api.getProductMatrix({ product }, signal),
+    staleTime: 5 * 60_000,
+  });
+
+/** Several product matrices at once (supply-chain view). Shares the cache with useProductMatrix. */
+export const useProductMatrices = (products: ProductId[]) =>
+  useQueries({
+    queries: products.map(productMatrixQuery),
+    combine: (results) => ({
+      matrices: results.map((r) => r.data),
+      isPending: results.some((r) => r.isPending),
+      error: results.find((r) => r.error)?.error ?? null,
+    }),
   });
 
 export const useProductMatrix = (product: ProductId | null) =>
