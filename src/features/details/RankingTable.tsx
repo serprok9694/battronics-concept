@@ -4,7 +4,9 @@ import type { Product } from '../../api/types';
 import { useDashboard } from '../../app/useDashboard';
 import { downloadCsv } from '../../domain/csv';
 import { formatCagr, formatGrowth, formatPp, formatShare, formatVolume, STATUS_LABEL } from '../../domain/format';
+import { unitInfo } from '../../domain/glossary';
 import type { PeriodSummary, YearSummary } from '../../domain/metrics';
+import { Term } from '../common/InfoTip';
 
 const TOP_N = 10;
 
@@ -68,10 +70,18 @@ export function RankingTable({ product, year, period }: Props) {
           <Table.Tr>
             <Table.Th w={28}>#</Table.Th>
             <Table.Th>Country</Table.Th>
-            <Table.Th ta="right">{product.unit}</Table.Th>
-            <Table.Th ta="right">Share</Table.Th>
-            <Table.Th ta="right">Δ share</Table.Th>
-            <Table.Th ta="right">CAGR</Table.Th>
+            <Table.Th ta="right">
+              <Term text={unitInfo(product.unit)}>{product.unit}</Term>
+            </Table.Th>
+            <Table.Th ta="right">
+              <Term term="share">Share</Term>
+            </Table.Th>
+            <Table.Th ta="right">
+              <Term term="shareChange">Δ share</Term>
+            </Table.Th>
+            <Table.Th ta="right">
+              <Term term="cagr">CAGR</Term>
+            </Table.Th>
           </Table.Tr>
         </Table.Thead>
         <Table.Tbody>
@@ -96,7 +106,9 @@ export function RankingTable({ product, year, period }: Props) {
           })}
           <Table.Tr c="dimmed">
             <Table.Td />
-            <Table.Td>Rest of World</Table.Td>
+            <Table.Td>
+              <Term term="rest">Rest of World</Term>
+            </Table.Td>
             <Table.Td ta="right">{formatVolume(year.rest.value, '').trim()}</Table.Td>
             <Table.Td ta="right">{formatShare(year.rest.share)}</Table.Td>
             <Table.Td />

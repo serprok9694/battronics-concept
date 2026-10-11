@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { useDashboard } from '../../app/useDashboard';
 import { STATUS_LABEL } from '../../domain/format';
 import { statusOfYear } from '../../domain/status';
+import { InfoTip } from '../common/InfoTip';
 
 const PLAY_INTERVAL_MS = 900;
 
@@ -45,6 +46,7 @@ export function PeriodControls() {
             <Text span c="dimmed" size="sm" className="tabular">
               {draftRange[0]}–{draftRange[1]}
             </Text>
+            <InfoTip term="period" />
           </Text>
         </Group>
         <Box h={28} mt={6} mb="lg" style={{ display: 'flex', alignItems: 'center' }}>
@@ -72,6 +74,7 @@ export function PeriodControls() {
             <Text span c="dimmed" size="sm" className="tabular">
               {selection.focusYear}
             </Text>
+            <InfoTip term="focusYear" />
           </Text>
           <Badge size="sm" variant={status === 'actual' ? 'light' : 'outline'} color={status === 'actual' ? 'gray' : 'orange'}>
             {STATUS_LABEL[status]}

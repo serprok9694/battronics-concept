@@ -6,6 +6,7 @@ import { CHAIN_STEPS, STEP_OF } from '../../domain/chain';
 import { formatHhi, formatShare } from '../../domain/format';
 import { HHI_LABEL, summarizeYear, type YearSummary } from '../../domain/metrics';
 import { useProductMatrices } from '../../queries/hooks';
+import { InfoTip } from '../common/InfoTip';
 
 interface Props {
   /** Products to show, already in chain order. */
@@ -64,6 +65,7 @@ export function ChainView({ products, current, country, mode }: Props) {
     <div>
       <Text size="sm" fw={600} mb={2}>
         {mode === 'country' ? 'Position in the battery value chain' : 'Battery value chain'} · {year}
+        <InfoTip term="valueChain" />
       </Text>
       {takeaway && (
         <Text size="xs" c="dimmed" mb={6}>

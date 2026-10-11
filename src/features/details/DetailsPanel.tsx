@@ -10,6 +10,8 @@ import { useCountryProfile } from '../../queries/hooks';
 import { useProductView } from '../useProductView';
 import { PortfolioShareChart, ShareChart, SupplyStackChart, VolumeChart } from './charts/charts';
 import { ChainView } from './ChainView';
+import { unitInfo } from '../../domain/glossary';
+import { InfoTip, Term } from '../common/InfoTip';
 import { KpiGrid } from './Kpi';
 import { RankingTable } from './RankingTable';
 
@@ -85,7 +87,11 @@ function ProductDetails() {
     <Stack gap="md">
       <Header
         title={iso3 && countryRow ? `${name(iso3)} · ${product.name}` : product.name}
-        subtitle={`${product.description} · unit: ${product.unit}`}
+        subtitle={
+          <>
+            {product.description} · unit: <Term text={unitInfo(product.unit)}>{product.unit}</Term>
+          </>
+        }
         year={year.year}
         status={year.status}
       />
@@ -99,20 +105,22 @@ function ProductDetails() {
           <Insight text={productInsight(product, year, period, name)} />
           <KpiGrid
             items={[
-              { label: `World production ${year.year}`, value: formatVolume(year.world, product.unit) },
-              { label: `Change vs ${year.year - 1}`, value: formatGrowth(yoy(matrix.world, matrix.years, year.year)) },
-              { label: `World CAGR ${growth}`, value: formatGrowth(period.worldCagr), hint: estimateNote },
+              { label: `World production ${year.year}`, value: formatVolume(year.world, product.unit), info: 'worldProduction' },
+              { label: `Change vs ${year.year - 1}`, value: formatGrowth(yoy(matrix.world, matrix.years, year.year)), info: 'yoy' },
+              { label: `World CAGR ${growth}`, value: formatGrowth(period.worldCagr), hint: estimateNote, info: 'cagr' },
               {
                 label: 'Concentration (HHI)',
+                info: 'hhi',
                 value: formatHhi(year.hhi.value),
                 hint: `${HHI_LABEL[year.hhi.category]} · ${period.hhiChange >= 0 ? '+' : '−'}${formatHhi(Math.abs(period.hhiChange))} since ${period.from}`,
               },
               {
                 label: 'Top-1 producer',
+                info: 'top1',
                 value: year.top1 ? formatShare(year.top1.share) : 'n/a',
                 hint: year.top1 ? name(year.top1.iso3) : undefined,
               },
-              { label: 'Top-3 share (CR3)', value: formatShare(year.cr3) },
+              { label: 'Top-3 share (CR3)', value: formatShare(year.cr3), info: 'cr3' },
             ]}
           />
           <ChartBlock title={`Supply by country, ${from}–${to} (${product.unit})`}>
@@ -170,11 +178,12 @@ function PairSection({ iso3 }: { iso3: Iso3 }) {
       <KpiGrid
         items={[
           { label: `Production ${year.year}`, value: formatVolume(ranked?.value, product.unit) },
-          { label: 'World share', value: formatShare(ranked?.share), hint: `of ${formatVolume(year.world, product.unit)}` },
-          { label: 'World rank', value: ranked?.rank ? `#${ranked.rank}` : 'n/a' },
-          { label: `Change vs ${year.year - 1}`, value: formatGrowth(yoy(row.values, matrix.years, year.year)) },
+          { label: 'World share', value: formatShare(ranked?.share), hint: `of ${formatVolume(year.world, product.unit)}`, info: 'share' },
+          { label: 'World rank', value: ranked?.rank ? `#${ranked.rank}` : 'n/a', info: 'rank' },
+          { label: `Change vs ${year.year - 1}`, value: formatGrowth(yoy(row.values, matrix.years, year.year)), info: 'yoy' },
           {
             label: `CAGR ${growth}`,
+            info: 'cagr',
             value: stats ? formatGrowth(stats.cagr) : 'n/a',
             hint:
               stats?.cagr.kind === 'value' && stats.cagr.sinceYear !== period.from
@@ -183,7 +192,7 @@ function PairSection({ iso3 }: { iso3: Iso3 }) {
                   ? 'incl. estimates'
                   : undefined,
           },
-          { label: `Share change ${growth}`, value: formatPp(stats?.shareChange) },
+          { label: `Share change ${growth}`, value: formatPp(stats?.shareChange), info: 'shareChange' },
         ]}
       />
       <ChartBlock title={`Production, ${product.unit}`}>
@@ -245,8 +254,8 @@ function CountryDetails({ iso3 }: { iso3: Iso3 }) {
       <KpiGrid
         items={[
           { label: 'Products produced', value: `${items.length} of ${products.size}` },
-          { label: 'Largest world share', value: formatShare(top?.s), hint: top?.prod.name },
-          { label: 'Products with ≥25% share', value: String(critical.length), hint: 'potential chokepoints' },
+          { label: 'Largest world share', value: formatShare(top?.s), hint: top?.prod.name, info: 'share' },
+          { label: 'Products with ≥25% share', value: String(critical.length), hint: 'potential chokepoints', info: 'chokepoints' },
         ]}
       />
       <ChainView products={BATTERY_CHAIN} country={iso3} mode="country" />
@@ -263,8 +272,14 @@ function CountryDetails({ iso3 }: { iso3: Iso3 }) {
               <Table.Th>Product</Table.Th>
               <Table.Th>Stage</Table.Th>
               <Table.Th ta="right">Production</Table.Th>
-              <Table.Th ta="right">Share</Table.Th>
-              <Table.Th ta="right">CAGR {from}→{year}</Table.Th>
+              <Table.Th ta="right">
+                <Term term="share">Share</Term>
+              </Table.Th>
+              <Table.Th ta="right">
+                <Term term="cagr">
+                  CAGR {from}→{year}
+                </Term>
+              </Table.Th>
             </Table.Tr>
           </Table.Thead>
           <Table.Tbody>
@@ -300,14 +315,17 @@ function ProductChain({ productId, country }: { productId: ProductId; country: I
 
 // ---- Small building blocks ----------------------------------------------
 
-function Header(props: { title: string; subtitle: string; year: number; status: 'actual' | 'estimate' | 'forecast' }) {
+function Header(props: { title: string; subtitle: ReactNode; year: number; status: 'actual' | 'estimate' | 'forecast' }) {
   return (
     <div>
       <Group justify="space-between" wrap="nowrap" align="flex-start">
         <Title order={5}>{props.title}</Title>
-        <Badge variant={props.status === 'actual' ? 'light' : 'outline'} color={props.status === 'actual' ? 'gray' : 'orange'}>
-          {props.year} · {STATUS_LABEL[props.status]}
-        </Badge>
+        <Group gap={2} wrap="nowrap">
+          <Badge variant={props.status === 'actual' ? 'light' : 'outline'} color={props.status === 'actual' ? 'gray' : 'orange'}>
+            {props.year} · {STATUS_LABEL[props.status]}
+          </Badge>
+          <InfoTip term="status" />
+        </Group>
       </Group>
       <Text size="xs" c="dimmed">
         {props.subtitle}
